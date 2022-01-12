@@ -1,7 +1,6 @@
 import json
-import unicodedata
-import psycopg2
-from config import config
+from db import *
+from helpers import *
 
 def parse_json_data():
     with open('stran.json', 'r') as data_file:
@@ -11,54 +10,45 @@ def parse_json_data():
 
     return lyrics
 
-def get_url_friendly_name(artist_name):
-    formatted_artist_name = artist_name.lower().replace(' ', '-')
-    url_friendly_name =  unicodedata.normalize('NFD', formatted_artist_name).encode('ascii', 'ignore')
-
-    return url_friendly_name.decode('utf-8')
-
-def artist_exists(artist_name):
-    artist_exists = False
-    connection = None
-
-    try:
-        params = config()
-
-        connection = psycopg2.connect(**params)
-
-        cursor = connection.cursor()
-
-        cursor.execute('select exists(select 1 from artist_slugs where name = %s);', (artist_name,))
-
-        artist_exists = cursor.fetchone()[0]
-
-        cursor.close()
-    except (Exception, psycopg2.DatabaseError) as error:
-        print(error)
-    finally:
-        if connection is not None:
-            connection.close()
-
-    return artist_exists
-
 # get all lyrics
 lyrics = parse_json_data()
 
 for lyric in lyrics:
-    url_friendly_artist_name = get_url_friendly_name(lyric['artist_name'])
+    artist_full_name = lyric['artist_name']
+    artist_slug = get_artist_slug(artist_full_name) 
+    lyric_title = lyric['lyric_title']
+    lyric_slug = get_lyric_slug(lyric_title)
+    lyric_body = lyric['lyric_body']
+    lyric_link = lyric['youtube_link']
 
-    artist_does_exist = artist_exists(url_friendly_artist_name)
+    artist_does_exist = artist_exists(artist_slug)
+
+    artist_id = 0
 
     if artist_does_exist:
-        print(f'artist {url_friendly_artist_name} does exist')
+        artist_id = get_artist_id_by_artist_slug(artist_slug)
     else:
-        print(f'artist {url_friendly_artist_name} does not exist')
+        head, sep, tail = artist_full_name.partition(' ')
+        first_name = head.lower()
+        last_name = tail.lower()
 
-    # check to see if artist exists
-    # if it does not, add new artist
-    # if it does, grab artist id
+        artist_id = add_artist(first_name, last_name)
 
-    # check to see if lyric exists for that artist id 
+        if artist_id == 0:
+            raise ValueError(f'artist id for {artist_full_name} is 0')
 
+        artist_slug_id = add_artist_slug_for_artist(artist_slug, artist_id)
 
+    if artist_id != 0:
+        lyric_does_exist = lyric_exists_by_artist_id_and_lyric_slug(artist_id, lyric_slug)
+
+        if lyric_does_exist:
+            pass
+        else:
+            lyric_id = add_lyric_for_artist(lyric_title, lyric_body, artist_id, lyric_link)
+
+            if lyric_id == 0:
+                raise ValueError(f'lyric id for the lyric {lyric_title} by {artist_full_name} is 0')
+
+            lyric_slug_id = add_lyric_slug_for_lyric(lyric_slug, lyric_id)
 
