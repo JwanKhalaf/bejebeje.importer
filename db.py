@@ -25,8 +25,6 @@ def add_artist(first_name, last_name):
     connection = None
     full_name = f'{first_name} {last_name}'.strip()
 
-    print(first_name, last_name, full_name)
-
     try:
         params = config()
 
@@ -34,7 +32,7 @@ def add_artist(first_name, last_name):
 
         cursor = connection.cursor()
 
-        cursor.execute("insert into artists (first_name, last_name, full_name, is_approved, user_id, created_at, is_deleted) values (%s, %s, %s, false, '6d9519c5-1c10-4ca5-8d26-dc8102c2294f', current_timestamp, false) returning id;", (first_name, last_name, full_name))
+        cursor.execute("insert into artists (first_name, last_name, full_name, is_approved, user_id, created_at, is_deleted, is_imported) values (%s, %s, %s, true, '1871eb29-9752-4c9d-951a-ae17fcb388b2', current_timestamp, false, true) returning id;", (first_name, last_name, full_name))
 
         record = cursor.fetchone()
 
@@ -118,7 +116,7 @@ def lyric_exists_by_artist_id_and_lyric_slug(artist_id, lyric_slug):
 
     return lyric_exists
 
-def add_lyric_for_artist(title, body, artist_id, link):
+def add_lyric_for_artist(title, body, artist_id, youtube_link):
     lyric_id = 0
     connection = None
 
@@ -129,7 +127,7 @@ def add_lyric_for_artist(title, body, artist_id, link):
 
         cursor = connection.cursor()
 
-        cursor.execute("insert into lyrics (title, body, user_id, created_at, is_deleted, is_approved, artist_id, link) values (%s, %s, '6d9519c5-1c10-4ca5-8d26-dc8102c2294f', current_timestamp, false, false, %s, %s) returning id;", (title, body, artist_id, link))
+        cursor.execute("insert into lyrics (title, body, user_id, created_at, is_deleted, is_approved, artist_id, is_imported, youtube_link) values (%s, %s, '1871eb29-9752-4c9d-951a-ae17fcb388b2', current_timestamp, false, true, %s, true, %s) returning id;", (title, body, artist_id, youtube_link))
 
         record = cursor.fetchone()
 
